@@ -28,7 +28,7 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>12.0.0.alpha3</version>
+      <version>10.0.13</version>
     </dependency>
     <dependency>
       <groupId>javax.servlet</groupId>
