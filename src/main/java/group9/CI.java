@@ -3,11 +3,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
-import java.io.IOException;
+import java.io.*;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+
+import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.TransportConfigCallback;
+import org.eclipse.jgit.api.errors.GitAPIException;
 
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
@@ -17,6 +21,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 
 public class CI extends AbstractHandler
 {
+    static String repo_name = "DD2480-Group-9-CI";
     public void handle(String target,
                        Request baseRequest,
                        HttpServletRequest request,
@@ -40,13 +45,29 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        Server server = new Server(8080);
-        server.setHandler(new CI());
-        server.start();
-        server.join();
+        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+//        Server server = new Server(8080);
+//        server.setHandler(new CI());
+//        server.start();
+//        server.join();
     }
 
-    public static String cloneRepo(String repoURL){
+    public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
+
+        // Remove the old clone of the repo (if it exists)
+        File repo_dir = new File(repo_name);
+        if(repo_dir.exists()) {
+
+            // Remove the old clone
+            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_name);
+            Process p = pb.start();
+            p.waitFor();
+            p.destroy();
+        }
+
+        // Clone the repo
+        Git git = Git.cloneRepository().setURI(repoURL).call();
+
         return "";
     }
 
