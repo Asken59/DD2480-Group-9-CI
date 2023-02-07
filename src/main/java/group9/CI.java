@@ -46,11 +46,6 @@ public class CI extends AbstractHandler
         server.join();
     }
 
-    @Override
-    public Request.Processor handle(Request request) throws Exception {
-        return null;
-    }
-
     public static String cloneRepo(String repoURL){
         return "";
     }
