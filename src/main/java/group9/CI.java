@@ -54,12 +54,13 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        testProject("DD2480-Group-9-CI");
-        cloneRepo("https://github.com/Asken59/DD2480-Group-9-CI.git");
-//        Server server = new Server(8080);
-//        server.setHandler(new CI());
-//        server.start();
-//        server.join();
+        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+        //compileProject("DD2480-Group-9-CI");
+        //testProject("DD2480-Group-9-CI");
+        Server server = new Server(8080);
+        server.setHandler(new CI());
+        server.start();
+        server.join();
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
@@ -81,8 +82,52 @@ public class CI extends AbstractHandler
         return "";
     }
 
-    public static String compileProject(String projectPath){
-        return "";
+    //TODO: Add cd functionality. Need absolute path
+    /** compileProject
+     * The method will attempt to compile the project at the given path.
+     * Compilation is preformed with mvn compile and the result of the command
+     * is parsed and returned.
+     * @param projectPath path to the project that should be compiled.
+     * @return Returns either "BUILD SUCCESS" or "BUILD FAILED" depending on compile result.
+    */
+    public static String compileProject(String projectPath) throws IOException, InterruptedException {
+
+
+        // Go into directory and launch mvn compile
+        ProcessBuilder pb = new ProcessBuilder("mvn", "compile");
+
+        // Start process
+        Process process = pb.start();
+
+        // Initialize bufferReader to read output from process
+        BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
+        StringBuilder builder = new StringBuilder();
+        String line = null;
+
+        // Iterate all lines and add to builder
+        while ( (line = reader.readLine()) != null ) {
+            builder.append(line);
+            builder.append(System.getProperty("line.separator"));
+        }
+
+        // Get string
+        String result = builder.toString();
+
+        // Wait and kill process
+        process.waitFor();
+        process.destroy();
+
+        // Parse result
+        // Retrieve relevant line and remove unnecessary tokens
+        String lines[]  = result.split("\n");
+        String parsedResult = lines[13].substring(7);
+
+        // Check if it failed
+        if (!parsedResult.equals("BUILD SUCCESS"))
+            parsedResult = "BUILD FAILED";
+
+        // Return parsedResults
+        return parsedResult;
     }
 
     public static String testProject(String projectPath) throws IOException, InterruptedException {
