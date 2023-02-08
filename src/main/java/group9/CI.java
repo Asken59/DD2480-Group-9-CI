@@ -49,7 +49,7 @@ public class CI extends AbstractHandler
     public static void main(String[] args) throws Exception
     {
         testProject("DD2480-Group-9-CI");
-        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+        cloneRepo("https://github.com/Asken59/DD2480-Group-9-CI.git");
 //        Server server = new Server(8080);
 //        server.setHandler(new CI());
 //        server.start();
