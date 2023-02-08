@@ -8,10 +8,13 @@ import java.io.IOException;
 import java.io.*;
 import java.nio.Buffer;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -42,19 +45,29 @@ public class CI extends AbstractHandler
         // 1st clone your repository
         // 2nd compile the code
 
+        generateIndexFile();
+
         response.getWriter().println("CI job done");
     }
 
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+//        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
         Server server = new Server(8080);
-        server.setHandler(new CI());
+        ResourceHandler resource_handler = new ResourceHandler();
+        resource_handler.setDirectoriesListed(true);
+        resource_handler.setResourceBase(".");
+        HandlerList handlers = new HandlerList();
+        handlers.setHandlers(new Handler[] { resource_handler, new CI() });
+        server.setHandler(handlers);
+
         server.start();
+
         server.join();
+
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
@@ -162,6 +175,30 @@ public class CI extends AbstractHandler
     }
 
     public static void logToFile(String compileResult, String testResult){
+
+    }
+
+    public static void generateIndexFile() throws IOException {
+
+        File json_dir = new File("build-logs");
+
+        BufferedWriter bw = new BufferedWriter(new FileWriter(new File("index.html"), false));
+        bw.write("<html><body>");
+        bw.write("<ul>");
+
+        for(File log : json_dir.listFiles()){
+            bw.write("<li>");
+            bw.write("<a href='/build-logs/");
+            bw.write(log.getName());
+            bw.write("'>");
+            bw.write(log.getName());
+            bw.write("</a>");
+            bw.write("</li>");
+        }
+
+        bw.write("</ul>");
+        bw.write("</body></html>");
+        bw.close();
 
     }
 }
