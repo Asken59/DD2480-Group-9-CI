@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit test for example project
  */
-public class AppTest 
+public class AppFailTest
 {
     /**
      * Rigorous Test :-)
@@ -22,7 +22,7 @@ public class AppTest
     @Test
     public void shouldAnswerWithFail()
     {
-        Assertions.assertTrue( true );
+        Assertions.assertTrue( false );
     }
 
 }
