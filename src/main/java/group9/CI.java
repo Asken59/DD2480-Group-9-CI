@@ -9,6 +9,12 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+
+import org.json.simple.JSONObject;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
  See the Jetty documentation for API documentation of those classes.
@@ -62,7 +68,28 @@ public class CI extends AbstractHandler
 
     }
 
-    public static void logToFile(String compileResult, String testResult){
+    public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
 
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date date = new Date();
+        String buildDate = formatter.format(date);
+        JSONObject obj = new JSONObject();
+
+        obj.put("repository", repository);
+        obj.put("branch", branch);
+        obj.put("commitId", commitId);
+        obj.put("buildDate", buildDate);
+        obj.put("compileResult ", compileResult);
+        obj.put("testResult", testResult);
+
+        String jsonFile = "build:" + buildDate;
+
+        try (FileWriter file = new FileWriter(jsonFile)) {
+            file.write(obj.toJSONString());
+            System.out.println("Successfully wrote to the file.");
+        } catch (IOException e) {
+            System.out.println("An error occurred while writing to the file.");
+            e.printStackTrace();
+        }
     }
 }
