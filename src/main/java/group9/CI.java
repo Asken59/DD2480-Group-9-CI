@@ -3,7 +3,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.*;
+import java.nio.Buffer;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
@@ -45,6 +48,7 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
+        testProject("DD2480-Group-9-CI");
         cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
 //        Server server = new Server(8080);
 //        server.setHandler(new CI());
@@ -75,8 +79,37 @@ public class CI extends AbstractHandler
         return "";
     }
 
-    public static String testProject(String projectPath){
-        return "";
+    public static String testProject(String projectPath) throws IOException, InterruptedException {
+
+        // Initialize a processbuilder
+        ProcessBuilder pb = new ProcessBuilder();
+
+        // Go into directory and launch mvn test
+        pb.command("cd", projectPath, ";", "mvn test");
+
+        // Start process
+        Process process = pb.start();
+
+        // Initialize bufferreader to read output from process
+        BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
+        StringBuilder builder = new StringBuilder();
+        String line = null;
+
+        // Iterate all lines and add to builder
+        while ( (line = reader.readLine()) != null ) {
+            builder.append(line);
+            builder.append(System.getProperty("line.separator"));
+        }
+
+        // Get string
+        String result = builder.toString();
+
+        // Wait and kill process
+        process.waitFor();
+        process.destroy();
+
+        // Return results
+        return result;
     }
 
     public static void notifyGithub(String compileResult, String testResult){
