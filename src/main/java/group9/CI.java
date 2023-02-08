@@ -50,7 +50,7 @@ public class CI extends AbstractHandler
     {
         cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
-        testProject("DD2480-Group-9-CI");
+        //testProject("DD2480-Group-9-CI");
         Server server = new Server(8080);
         server.setHandler(new CI());
         server.start();
