@@ -167,6 +167,7 @@ public class CI extends AbstractHandler
 
         // Go into directory and launch mvn compile
         ProcessBuilder pb = new ProcessBuilder("mvn", "compile");
+        pb.directory(new File(projectPath));
 
         // Start process
         Process process = pb.start();
