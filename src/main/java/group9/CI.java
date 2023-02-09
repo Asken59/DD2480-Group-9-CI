@@ -202,6 +202,14 @@ public class CI extends AbstractHandler
         return parsedResult;
     }
 
+    /** testProject
+     * The method will attempt to run all tests in the project at the given path.
+     * Test is preformed with mvn test and the result of the command
+     * is parsed and returned.
+     * @param projectPath path to the project that should be compiled.
+     * @return Returns either "BUILD SUCCESS" or "BUILD FAILED" with the
+     * corresponding tests which failed, depending on compile result.
+     */
     public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
         // Initialize a processbuilder
