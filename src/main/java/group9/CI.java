@@ -17,6 +17,7 @@ import org.json.JSONObject;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TransportConfigCallback;
@@ -55,11 +56,11 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        logToFile("repo", "branch", "commitID",
-                "compileResult", "testResult");
+        //logToFile("repo", "branch", "commitID",
+        //        "compileResult", "testResult");
 //        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
-        //testProject("DD2480-Group-9-CI");
+        testProject("DD2480-Group-9-CI");
 //        Server server = new Server(8080);
 //        server.setHandler(new CI());
 //        server.start();
@@ -133,37 +134,42 @@ public class CI extends AbstractHandler
         return parsedResult;
     }
 
-    public static String testProject(String projectPath) throws IOException, InterruptedException {
+    public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
         // Initialize a processbuilder
         ProcessBuilder pb = new ProcessBuilder();
 
         // Go into directory and launch mvn test
-        pb.command("cd", projectPath, ";", "mvn test");
+        pb.command("/bin/bash", "-c", "mvn test");
+        // pb.command("cd", projectPath, ";", "mvn test");
 
         // Start process
         Process process = pb.start();
 
         // Initialize bufferreader to read output from process
         BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
-        StringBuilder builder = new StringBuilder();
         String line = null;
+        ArrayList<String> testResult = new ArrayList<String>();
 
         // Iterate all lines and add to builder
         while ( (line = reader.readLine()) != null ) {
-            builder.append(line);
-            builder.append(System.getProperty("line.separator"));
+            if (line.contains("CITests.") && !line.contains("at group9.")) {
+                line = line.replaceAll("^\\[ERROR\\]\\s*", "");
+                testResult.add(line);
+            }
+            if (line.contains("BUILD")) {
+                line = line.replaceAll("^\\[INFO\\]\\s*", "");
+                testResult.add(line);
+            }
         }
-
-        // Get string
-        String result = builder.toString();
 
         // Wait and kill process
         process.waitFor();
         process.destroy();
 
+
         // Return results
-        return result;
+        return testResult;
     }
 
     public static void notifyGithub(String compileResult, String testResult){
