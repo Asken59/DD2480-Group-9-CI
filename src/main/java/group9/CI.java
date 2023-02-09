@@ -61,19 +61,57 @@ public class CI extends AbstractHandler
             }
             String data = buffer.toString();
 
+            // Convert POST request body to json
+            JSONObject json = new JSONObject(data);
 
-            // Print data
-            System.out.println(data);
+            // Retrieve url
+            String repoURL = json.getJSONObject("repository").getString("html_url");
 
-            // Clone
-            // Compile
-            // Test
+            // Retrieve repo
+            String repoName = json.getJSONObject("repository").getString("full_name");
 
-            // Write log
-            // change index.html
+            // Retrieve branch
+            String branch = json.getString("ref");
 
-            // Send notification
+            // Retrieve commitID
+            String commitID = json.getJSONObject("head_commit").getString("id");
 
+            // Retrieve commit message
+            String commitMessage = json.getJSONObject("head_commit").getString("message");
+
+//            // Clone
+//            String projectPath;
+//            try {
+//                projectPath = cloneRepo("");
+//            } catch (Exception e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            // Compile
+//            String compileResult;
+//            try {
+//                compileResult = compileProject(projectPath);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            // Test
+//            String testResult;
+//            try {
+//                testResult = testProject(projectPath);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            // Write log
+//            logToFile("repo", "branch", "commitID",
+//                compileResult, testResult);
+//
+//            // change index.html
+//            generateIndexFile();
+//
+//            // Send notification
+//
 
         }
     }
@@ -92,14 +130,9 @@ public class CI extends AbstractHandler
         // Run once before the server starts to make sure there is an index.html file
         generateIndexFile();
 
+        // Start server
         server.start();
-
         server.join();
-
-        //logToFile("repo", "branch", "commitID", "compileResult", "testResult");
-        //cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
-        //compileProject("DD2480-Group-9-CI");
-        //testProject("DD2480-Group-9-CI");
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
