@@ -244,19 +244,34 @@ public class CI extends AbstractHandler
 
     }
 
-    public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
+    public static void logToFile(String repository, String branch, String commitId, ArrayList<String> testResult, String compileResult) throws IOException {
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
         Date date = new Date();
         String buildDate = formatter.format(date);
         JSONObject obj = new JSONObject();
 
+        String tests ="";
+
+        for(int i = 0; i < testResult.size()-1; i++){
+            if(i == 0) {
+                tests = "Tests failed + " + tests + testResult.get(i);
+            }
+            else {
+                tests = ", " + testResult.get(i);
+            }
+        }
+
+        if(tests.length() == 0){
+            tests = "All tests passed";
+        }
+
         obj.put("repository", repository);
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
         obj.put("compileResult", compileResult);
-        obj.put("testResult", testResult);
+        obj.put("testResult", tests);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
@@ -270,7 +285,6 @@ public class CI extends AbstractHandler
             e.printStackTrace();
         }
     }
-
     public static void generateIndexFile() throws IOException {
 
         File json_dir = new File("build-logs");
