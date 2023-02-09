@@ -21,6 +21,7 @@ import org.json.JSONObject;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 import org.eclipse.jgit.api.Git;
@@ -60,33 +61,23 @@ public class CI extends AbstractHandler
             }
             String data = buffer.toString();
 
-            // Print data
-            System.out.println(data);
-
             // Convert POST request body to json
             JSONObject json = new JSONObject(data);
 
             // Retrieve url
             String repoURL = json.getJSONObject("repository").getString("html_url");
-            System.out.println("repoURL: " + repoURL);
 
             // Retrieve repo
             String repoName = json.getJSONObject("repository").getString("full_name");
-            System.out.println("repoName: " + repoName);
 
             // Retrieve branch
             String branch = json.getString("ref");
-            String[] parts = branch.split("n/");
-            branch = parts[parts.length-1]+parts[parts.length-2];
-            System.out.println("branch: " + branch);
 
             // Retrieve commitID
             String commitID = json.getJSONObject("head_commit").getString("id");
-            System.out.println("commitID: " + commitID);
 
             // Retrieve commit message
             String commitMessage = json.getJSONObject("head_commit").getString("message");
-            System.out.println("commitMessage: " + commitMessage);
 
 //            // Clone
 //            String projectPath;
@@ -211,37 +202,42 @@ public class CI extends AbstractHandler
         return parsedResult;
     }
 
-    public static String testProject(String projectPath) throws IOException, InterruptedException {
+    public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
         // Initialize a processbuilder
         ProcessBuilder pb = new ProcessBuilder();
 
         // Go into directory and launch mvn test
-        pb.command("cd", projectPath, ";", "mvn test");
+        pb.command("/bin/bash", "-c", "mvn test");
+        // pb.command("cd", projectPath, ";", "mvn test");
 
         // Start process
         Process process = pb.start();
 
         // Initialize bufferreader to read output from process
         BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
-        StringBuilder builder = new StringBuilder();
         String line = null;
+        ArrayList<String> testResult = new ArrayList<String>();
 
         // Iterate all lines and add to builder
         while ( (line = reader.readLine()) != null ) {
-            builder.append(line);
-            builder.append(System.getProperty("line.separator"));
+            if (line.contains("CITests.") && !line.contains("at group9.")) {
+                line = line.replaceAll("^\\[ERROR\\]\\s*", "");
+                testResult.add(line);
+            }
+            if (line.contains("BUILD")) {
+                line = line.replaceAll("^\\[INFO\\]\\s*", "");
+                testResult.add(line);
+            }
         }
-
-        // Get string
-        String result = builder.toString();
 
         // Wait and kill process
         process.waitFor();
         process.destroy();
 
+
         // Return results
-        return result;
+        return testResult;
     }
 
     public static void notifyGithub(String compileResult, String testResult){
@@ -259,13 +255,13 @@ public class CI extends AbstractHandler
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
-        obj.put("compileResult ", compileResult);
+        obj.put("compileResult", compileResult);
         obj.put("testResult", testResult);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(file_name), false));) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));) {
             bw.write(obj.toString(4));
             bw.close();
             System.out.println("Successfully wrote to the file.");

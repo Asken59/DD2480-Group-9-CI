@@ -1,6 +1,7 @@
 package group9;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import org.junit.Test;
 
@@ -17,6 +18,11 @@ public class CITests
     @Test
     public void shouldAnswerWithTrue()
     {
-        assertTrue( true );
+        assertTrue( false );
+    }
+
+    @Test
+    public void shouldAnswerWithFalse() {
+        assertFalse( true );
     }
 }
