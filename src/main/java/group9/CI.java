@@ -67,7 +67,7 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-//        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+//        cloneRepo("https://github.com/Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
         Server server = new Server(8080);
@@ -85,7 +85,7 @@ public class CI extends AbstractHandler
 
         server.join();
 
-//        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+//        cloneRepo("https://github.com/Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
 //        Server server = new Server(8080);
