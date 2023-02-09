@@ -8,9 +8,13 @@ import java.io.IOException;
 import java.io.*;
 import java.nio.Buffer;
 
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+
+import org.eclipse.jetty.server.handler.HandlerList;
+import org.eclipse.jetty.server.handler.ResourceHandler;
 
 import org.json.JSONObject;
 
@@ -19,6 +23,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -45,6 +50,13 @@ public class CI extends AbstractHandler
 
         System.out.println(target);
 
+        // Mock-file. Remove this later!
+        logToFile("repo", "branch", "commitID",
+                "compileResult", "testResult");
+
+        // Generate new index file that appends the newly created build log to list of logs
+        generateIndexFile();
+
         // here you do all the continuous integration tasks
         // for example
         // 1st clone your repository
@@ -60,11 +72,21 @@ public class CI extends AbstractHandler
         //        "compileResult", "testResult");
 //        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
-        testProject("DD2480-Group-9-CI");
-//        Server server = new Server(8080);
-//        server.setHandler(new CI());
-//        server.start();
-//        server.join();
+        //testProject("DD2480-Group-9-CI");
+        Server server = new Server(8080);
+        ResourceHandler resource_handler = new ResourceHandler();
+        resource_handler.setDirectoriesListed(true);
+        resource_handler.setResourceBase(".");
+        HandlerList handlers = new HandlerList();
+        handlers.setHandlers(new Handler[] { resource_handler, new CI() });
+        server.setHandler(handlers);
+
+        // Run once before the server starts to make sure there is an index.html file
+        generateIndexFile();
+
+        server.start();
+
+        server.join();
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
@@ -187,13 +209,13 @@ public class CI extends AbstractHandler
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
-        obj.put("compileResult ", compileResult);
+        obj.put("compileResult", compileResult);
         obj.put("testResult", testResult);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(file_name), false));) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));) {
             bw.write(obj.toString(4));
             bw.close();
             System.out.println("Successfully wrote to the file.");
@@ -201,5 +223,29 @@ public class CI extends AbstractHandler
             System.out.println("An error occurred while writing to the file.");
             e.printStackTrace();
         }
+    }
+
+    public static void generateIndexFile() throws IOException {
+
+        File json_dir = new File("build-logs");
+
+        BufferedWriter bw = new BufferedWriter(new FileWriter(new File("index.html"), false));
+        bw.write("<html><body>");
+        bw.write("<ul>");
+
+        for(File log : json_dir.listFiles()){
+            bw.write("<li>");
+            bw.write("<a href='/build-logs/");
+            bw.write(log.getName());
+            bw.write("'>");
+            bw.write(log.getName());
+            bw.write("</a>");
+            bw.write("</li>");
+        }
+
+        bw.write("</ul>");
+        bw.write("</body></html>");
+        bw.close();
+
     }
 }
