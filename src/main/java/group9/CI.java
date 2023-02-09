@@ -204,18 +204,19 @@ public class CI extends AbstractHandler
 
     public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
+
         // Initialize a processbuilder
         ProcessBuilder pb = new ProcessBuilder();
 
         // Go into directory and launch mvn test
-        pb.command("/bin/bash", "-c", "mvn test");
-        // pb.command("cd", projectPath, ";", "mvn test");
+        pb.directory(new File(projectPath));
+        pb.command("mvn", "test");
 
         // Start process
         Process process = pb.start();
-
         // Initialize bufferreader to read output from process
         BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
+        StringBuilder builder = new StringBuilder();
         String line = null;
         ArrayList<String> testResult = new ArrayList<String>();
 
@@ -229,12 +230,15 @@ public class CI extends AbstractHandler
                 line = line.replaceAll("^\\[INFO\\]\\s*", "");
                 testResult.add(line);
             }
+            builder.append(line);
+            builder.append(System.getProperty("line.separator"));
         }
 
         // Wait and kill process
         process.waitFor();
         process.destroy();
 
+        String result = builder.toString();
 
         // Return results
         return testResult;
