@@ -63,15 +63,64 @@ public class CI extends AbstractHandler
             // Print data
             System.out.println(data);
 
-            // Clone
-            // Compile
-            // Test
+            // Convert POST request body to json
+            JSONObject json = new JSONObject(data);
 
-            // Write log
-            // change index.html
+            // Retrieve url
+            String repoURL = json.getJSONObject("repository").getString("html_url");
+            System.out.println("repoURL: " + repoURL);
 
-            // Send notification
+            // Retrieve repo
+            String repoName = json.getJSONObject("repository").getString("full_name");
+            System.out.println("repoName: " + repoName);
 
+            // Retrieve branch
+            String branch = json.getString("ref");
+            String[] parts = branch.split("n/");
+            branch = parts[parts.length-1]+parts[parts.length-2];
+            System.out.println("branch: " + branch);
+
+            // Retrieve commitID
+            String commitID = json.getJSONObject("head_commit").getString("id");
+            System.out.println("commitID: " + commitID);
+
+            // Retrieve commit message
+            String commitMessage = json.getJSONObject("head_commit").getString("message");
+            System.out.println("commitMessage: " + commitMessage);
+
+//            // Clone
+//            String projectPath;
+//            try {
+//                projectPath = cloneRepo("");
+//            } catch (Exception e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            // Compile
+//            String compileResult;
+//            try {
+//                compileResult = compileProject(projectPath);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            // Test
+//            String testResult;
+//            try {
+//                testResult = testProject(projectPath);
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            // Write log
+//            logToFile("repo", "branch", "commitID",
+//                compileResult, testResult);
+//
+//            // change index.html
+//            generateIndexFile();
+//
+//            // Send notification
+//
 
         }
     }
@@ -90,15 +139,9 @@ public class CI extends AbstractHandler
         // Run once before the server starts to make sure there is an index.html file
         generateIndexFile();
 
+        // Start server
         server.start();
-
         server.join();
-
-        logToFile("repo", "branch", "commitID",
-                "compileResult", "testResult");
-        //cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
-        //compileProject("DD2480-Group-9-CI");
-        //testProject("DD2480-Group-9-CI");
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
