@@ -45,8 +45,6 @@ public class CI extends AbstractHandler
         // 1st clone your repository
         // 2nd compile the code
 
-        generateIndexFile();
-
         response.getWriter().println("CI job done");
     }
 
@@ -63,6 +61,9 @@ public class CI extends AbstractHandler
         HandlerList handlers = new HandlerList();
         handlers.setHandlers(new Handler[] { resource_handler, new CI() });
         server.setHandler(handlers);
+
+        // Run once before the server starts to make sure there is an index.html file
+        generateIndexFile();
 
         server.start();
 
