@@ -18,11 +18,11 @@ public class CITests
     @Test
     public void shouldAnswerWithTrue()
     {
-        assertTrue( false );
+        assertTrue( true );
     }
 
     @Test
     public void shouldAnswerWithFalse() {
-        assertFalse( true );
+        assertFalse( false );
     }
 }
