@@ -45,6 +45,11 @@
       <artifactId>org.eclipse.jgit</artifactId>
       <version>6.4.0.202211300538-r</version>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-client</artifactId>
+      <version>11.0.13</version>
+    </dependency>
 
   </dependencies>
 
