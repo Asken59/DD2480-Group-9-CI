@@ -46,7 +46,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class CI extends AbstractHandler
 {
-    static String repo_name = "DD2480-Group-9-CI";
     private static HttpClient apiClient;
     private static String accessToken;
 
@@ -123,7 +122,7 @@ public class CI extends AbstractHandler
 //            generateIndexFile();
 //
 //            // Send notification
-//            commitStatus("owner/repo", commit sha, "success" or "failure", message);
+//            commitStatus("owner/repo", "commit sha", "success" or "failure", "message");
         }
     }
 
@@ -131,7 +130,7 @@ public class CI extends AbstractHandler
     public static void main(String[] args) throws Exception
     {
         //Read the github access token
-        System.out.println("Please enter your GitHub access token (used for commit statuses):");
+        System.out.println("Please enter your GitHub access token (used for commit status):");
         Scanner input = new Scanner(System.in);
         accessToken = input.nextLine();
         input.close();
@@ -160,20 +159,22 @@ public class CI extends AbstractHandler
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
 
         // Remove the old clone of the repo (if it exists)
-        File repo_dir = new File(repo_name);
+        String repo_dir_name = "repository";
+        File repo_dir = new File(repo_dir_name);
         if(repo_dir.exists()) {
 
             // Remove the old clone
-            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_name);
+            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_dir_name);
             Process p = pb.start();
             p.waitFor();
             p.destroy();
         }
 
         // Clone the repo
-        Git git = Git.cloneRepository().setURI(repoURL).call();
+        Git git = Git.cloneRepository().setDirectory(repo_dir).setURI(repoURL).call();
 
-        return "";
+        // Return the absolute path to the cloned repository
+        return repo_dir.getAbsolutePath();
     }
 
     //TODO: Add cd functionality. Need absolute path
@@ -189,6 +190,7 @@ public class CI extends AbstractHandler
 
         // Go into directory and launch mvn compile
         ProcessBuilder pb = new ProcessBuilder("mvn", "compile");
+        pb.directory(new File(projectPath));
 
         // Start process
         Process process = pb.start();
@@ -226,18 +228,19 @@ public class CI extends AbstractHandler
 
     public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
+
         // Initialize a processbuilder
         ProcessBuilder pb = new ProcessBuilder();
 
         // Go into directory and launch mvn test
-        pb.command("/bin/bash", "-c", "mvn test");
-        // pb.command("cd", projectPath, ";", "mvn test");
+        pb.directory(new File(projectPath));
+        pb.command("mvn", "test");
 
         // Start process
         Process process = pb.start();
-
         // Initialize bufferreader to read output from process
         BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
+        StringBuilder builder = new StringBuilder();
         String line = null;
         ArrayList<String> testResult = new ArrayList<String>();
 
@@ -251,30 +254,48 @@ public class CI extends AbstractHandler
                 line = line.replaceAll("^\\[INFO\\]\\s*", "");
                 testResult.add(line);
             }
+            builder.append(line);
+            builder.append(System.getProperty("line.separator"));
         }
 
         // Wait and kill process
         process.waitFor();
         process.destroy();
 
+        String result = builder.toString();
 
         // Return results
         return testResult;
     }
 
-    public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
 
+    public static void logToFile(String repository, String branch, String commitId, ArrayList<String> testResult, String compileResult) throws IOException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
         Date date = new Date();
         String buildDate = formatter.format(date);
         JSONObject obj = new JSONObject();
+
+        String tests ="";
+
+        for(int i = 0; i < testResult.size()-1; i++){
+            if(i == 0) {
+                tests = "Tests failed + " + tests + testResult.get(i);
+            }
+            else {
+                tests = ", " + testResult.get(i);
+            }
+        }
+
+        if(tests.length() == 0){
+            tests = "All tests passed";
+        }
 
         obj.put("repository", repository);
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
         obj.put("compileResult", compileResult);
-        obj.put("testResult", testResult);
+        obj.put("testResult", tests);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
@@ -311,6 +332,7 @@ public class CI extends AbstractHandler
         ContentResponse response = apiRequest.send();
         System.out.println("Reply: " + response.getContentAsString());
     }
+
 
     public static void generateIndexFile() throws IOException {
 
