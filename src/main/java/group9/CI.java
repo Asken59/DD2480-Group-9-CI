@@ -35,20 +35,39 @@ public class CI extends AbstractHandler
         response.setStatus(HttpServletResponse.SC_OK);
         baseRequest.setHandled(true);
 
-        System.out.println(target);
+        if (request.getMethod().equals("POST")){
+            // Handle CI
 
-        // here you do all the continuous integration tasks
-        // for example
-        // 1st clone your repository
-        // 2nd compile the code
+            // Read from request
+            StringBuilder buffer = new StringBuilder();
+            BufferedReader reader = request.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+                buffer.append(System.lineSeparator());
+            }
+            String data = buffer.toString();
 
-        response.getWriter().println("CI job done");
+            // Print data
+            System.out.println(data);
+
+            // Clone
+            // Compile
+            // Test
+
+            // Write log
+            // change index.html
+
+            // Send notification
+
+
+        }
     }
 
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+        //cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
         Server server = new Server(8080);
