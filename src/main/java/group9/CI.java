@@ -21,6 +21,7 @@ import org.json.JSONObject;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 import org.eclipse.jgit.api.Git;
@@ -60,6 +61,7 @@ public class CI extends AbstractHandler
             }
             String data = buffer.toString();
 
+
             // Print data
             System.out.println(data);
 
@@ -94,8 +96,7 @@ public class CI extends AbstractHandler
 
         server.join();
 
-        logToFile("repo", "branch", "commitID",
-                "compileResult", "testResult");
+        //logToFile("repo", "branch", "commitID", "compileResult", "testResult");
         //cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
@@ -168,37 +169,42 @@ public class CI extends AbstractHandler
         return parsedResult;
     }
 
-    public static String testProject(String projectPath) throws IOException, InterruptedException {
+    public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
         // Initialize a processbuilder
         ProcessBuilder pb = new ProcessBuilder();
 
         // Go into directory and launch mvn test
-        pb.command("cd", projectPath, ";", "mvn test");
+        pb.command("/bin/bash", "-c", "mvn test");
+        // pb.command("cd", projectPath, ";", "mvn test");
 
         // Start process
         Process process = pb.start();
 
         // Initialize bufferreader to read output from process
         BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
-        StringBuilder builder = new StringBuilder();
         String line = null;
+        ArrayList<String> testResult = new ArrayList<String>();
 
         // Iterate all lines and add to builder
         while ( (line = reader.readLine()) != null ) {
-            builder.append(line);
-            builder.append(System.getProperty("line.separator"));
+            if (line.contains("CITests.") && !line.contains("at group9.")) {
+                line = line.replaceAll("^\\[ERROR\\]\\s*", "");
+                testResult.add(line);
+            }
+            if (line.contains("BUILD")) {
+                line = line.replaceAll("^\\[INFO\\]\\s*", "");
+                testResult.add(line);
+            }
         }
-
-        // Get string
-        String result = builder.toString();
 
         // Wait and kill process
         process.waitFor();
         process.destroy();
 
+
         // Return results
-        return result;
+        return testResult;
     }
 
     public static void notifyGithub(String compileResult, String testResult){
@@ -216,13 +222,13 @@ public class CI extends AbstractHandler
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
-        obj.put("compileResult ", compileResult);
+        obj.put("compileResult", compileResult);
         obj.put("testResult", testResult);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(file_name), false));) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));) {
             bw.write(obj.toString(4));
             bw.close();
             System.out.println("Successfully wrote to the file.");
