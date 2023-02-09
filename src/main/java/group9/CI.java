@@ -37,7 +37,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class CI extends AbstractHandler
 {
-    static String repo_name = "DD2480-Group-9-CI";
     public void handle(String target,
                        Request baseRequest,
                        HttpServletRequest request,
@@ -138,20 +137,22 @@ public class CI extends AbstractHandler
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
 
         // Remove the old clone of the repo (if it exists)
-        File repo_dir = new File(repo_name);
+        String repo_dir_name = "repository";
+        File repo_dir = new File(repo_dir_name);
         if(repo_dir.exists()) {
 
             // Remove the old clone
-            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_name);
+            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_dir_name);
             Process p = pb.start();
             p.waitFor();
             p.destroy();
         }
 
         // Clone the repo
-        Git git = Git.cloneRepository().setURI(repoURL).call();
+        Git git = Git.cloneRepository().setDirectory(repo_dir).setURI(repoURL).call();
 
-        return "";
+        // Return the absolute path to the cloned repository
+        return repo_dir.getAbsolutePath();
     }
 
     //TODO: Add cd functionality. Need absolute path
