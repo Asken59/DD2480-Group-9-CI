@@ -8,6 +8,11 @@ import java.io.IOException;
 import java.io.*;
 import java.nio.Buffer;
 
+import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.util.StringContentProvider;
+import org.eclipse.jetty.client.util.StringRequestContent;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
@@ -16,6 +21,8 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 
+import org.eclipse.jetty.client.HttpClient;
+
 import org.json.JSONObject;
 
 import java.io.FileWriter;
@@ -23,11 +30,13 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
-
 
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
@@ -38,6 +47,9 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 public class CI extends AbstractHandler
 {
     static String repo_name = "DD2480-Group-9-CI";
+    private static HttpClient apiClient;
+    private static String accessToken;
+
     public void handle(String target,
                        Request baseRequest,
                        HttpServletRequest request,
@@ -111,14 +123,19 @@ public class CI extends AbstractHandler
 //            generateIndexFile();
 //
 //            // Send notification
-//
-
+//            commitStatus("owner/repo", commit sha, "success" or "failure", message);
         }
     }
 
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
+        //Read the github access token
+        System.out.println("Please enter your GitHub access token (used for commit statuses):");
+        Scanner input = new Scanner(System.in);
+        accessToken = input.nextLine();
+        input.close();
+
         Server server = new Server(8080);
         ResourceHandler resource_handler = new ResourceHandler();
         resource_handler.setDirectoriesListed(true);
@@ -129,6 +146,11 @@ public class CI extends AbstractHandler
 
         // Run once before the server starts to make sure there is an index.html file
         generateIndexFile();
+
+        //Start the API client
+        apiClient = new HttpClient();
+        apiClient.setFollowRedirects(false);
+        apiClient.start();
 
         // Start server
         server.start();
@@ -240,10 +262,6 @@ public class CI extends AbstractHandler
         return testResult;
     }
 
-    public static void notifyGithub(String compileResult, String testResult){
-
-    }
-
     public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
@@ -269,6 +287,29 @@ public class CI extends AbstractHandler
             System.out.println("An error occurred while writing to the file.");
             e.printStackTrace();
         }
+    }
+
+    public static void commitStatus(String repo, String sha, String buildStatus, String message)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        String url = "https://api.github.com/repos/" + repo + "/statuses/" + sha;
+
+        String jsonPayload = "";
+        if(message.length() == 0)
+            jsonPayload = "{\"state\":\"" + buildStatus + "\"}";
+        else
+            jsonPayload = "{\"state\":\"" + buildStatus + "\",\"description\":\"" + message + "\"}";
+
+        org.eclipse.jetty.client.api.Request apiRequest = apiClient.POST(url);
+
+        //Per the GitHub api docs
+        apiRequest.header(HttpHeader.ACCEPT, "application/vnd.github+json");
+        apiRequest.header(HttpHeader.CONTENT_TYPE, "application/json");
+        apiRequest.header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken);
+        apiRequest.body(new StringRequestContent(jsonPayload));
+
+        System.out.println("Updating commit status of commit " + sha);
+        ContentResponse response = apiRequest.send();
+        System.out.println("Reply: " + response.getContentAsString());
     }
 
     public static void generateIndexFile() throws IOException {
