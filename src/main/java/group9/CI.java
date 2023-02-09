@@ -48,31 +48,39 @@ public class CI extends AbstractHandler
         response.setStatus(HttpServletResponse.SC_OK);
         baseRequest.setHandled(true);
 
-        System.out.println(target);
+        if (request.getMethod().equals("POST")){
+            // Handle CI
 
-        // Mock-file. Remove this later!
-        logToFile("repo", "branch", "commitID",
-                "compileResult", "testResult");
+            // Read from request
+            StringBuilder buffer = new StringBuilder();
+            BufferedReader reader = request.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+                buffer.append(System.lineSeparator());
+            }
+            String data = buffer.toString();
 
-        // Generate new index file that appends the newly created build log to list of logs
-        generateIndexFile();
 
-        // here you do all the continuous integration tasks
-        // for example
-        // 1st clone your repository
-        // 2nd compile the code
+            // Print data
+            System.out.println(data);
 
-        response.getWriter().println("CI job done");
+            // Clone
+            // Compile
+            // Test
+
+            // Write log
+            // change index.html
+
+            // Send notification
+
+
+        }
     }
 
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-//        cloneRepo("https://github.com/Asken59/DD2480-Group-9-CI.git");
-        //logToFile("repo", "branch", "commitID",
-        //        "compileResult", "testResult");
-        //compileProject("DD2480-Group-9-CI");
-        //testProject("DD2480-Group-9-CI");
         Server server = new Server(8080);
         ResourceHandler resource_handler = new ResourceHandler();
         resource_handler.setDirectoriesListed(true);
@@ -88,13 +96,10 @@ public class CI extends AbstractHandler
 
         server.join();
 
-//        cloneRepo("https://github.com/Asken59/DD2480-Group-9-CI.git");
+        //logToFile("repo", "branch", "commitID", "compileResult", "testResult");
+        //cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
-//        Server server = new Server(8080);
-//        server.setHandler(new CI());
-//        server.start();
-//        server.join();
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
