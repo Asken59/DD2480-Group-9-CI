@@ -12,9 +12,16 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
+import org.json.JSONObject;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
+
 
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
@@ -48,13 +55,15 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
+        logToFile("repo", "branch", "commitID",
+                "compileResult", "testResult");
+//        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
-        Server server = new Server(8080);
-        server.setHandler(new CI());
-        server.start();
-        server.join();
+//        Server server = new Server(8080);
+//        server.setHandler(new CI());
+//        server.start();
+//        server.join();
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
@@ -161,7 +170,30 @@ public class CI extends AbstractHandler
 
     }
 
-    public static void logToFile(String compileResult, String testResult){
+    public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
 
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
+        Date date = new Date();
+        String buildDate = formatter.format(date);
+        JSONObject obj = new JSONObject();
+
+        obj.put("repository", repository);
+        obj.put("branch", branch);
+        obj.put("commitId", commitId);
+        obj.put("buildDate", buildDate);
+        obj.put("compileResult ", compileResult);
+        obj.put("testResult", testResult);
+
+        File json_dir = new File("build-logs");
+        String file_name = "build-" + buildDate + ".json";
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(file_name), false));) {
+            bw.write(obj.toString(4));
+            bw.close();
+            System.out.println("Successfully wrote to the file.");
+        } catch (IOException e) {
+            System.out.println("An error occurred while writing to the file.");
+            e.printStackTrace();
+        }
     }
 }
