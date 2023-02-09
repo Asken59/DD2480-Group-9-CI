@@ -49,6 +49,13 @@ public class CI extends AbstractHandler
 
         System.out.println(target);
 
+        // Mock-file. Remove this later!
+        logToFile("repo", "branch", "commitID",
+                "compileResult", "testResult");
+
+        // Generate new index file that appends the newly created build log to list of logs
+        generateIndexFile();
+
         // here you do all the continuous integration tasks
         // for example
         // 1st clone your repository
@@ -78,8 +85,6 @@ public class CI extends AbstractHandler
 
         server.join();
 
-        logToFile("repo", "branch", "commitID",
-                "compileResult", "testResult");
 //        cloneRepo("git@github.com:Asken59/DD2480-Group-9-CI.git");
         //compileProject("DD2480-Group-9-CI");
         //testProject("DD2480-Group-9-CI");
@@ -204,13 +209,13 @@ public class CI extends AbstractHandler
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
-        obj.put("compileResult ", compileResult);
+        obj.put("compileResult", compileResult);
         obj.put("testResult", testResult);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(file_name), false));) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));) {
             bw.write(obj.toString(4));
             bw.close();
             System.out.println("Successfully wrote to the file.");
