@@ -368,7 +368,8 @@ public class CI extends AbstractHandler
     public static void checkoutBranch(String branchName) throws IOException, InterruptedException {
 
         // Set up a ProcessBuilder and specify necessary commands
-        ProcessBuilder pb = new ProcessBuilder("cd", "repository", ";", "git", "checkout", branchName);
+        ProcessBuilder pb = new ProcessBuilder("git", "checkout", branchName);
+        pb.directory(new File("repository"));
 
         // Start a process and execute the commands
         Process p = pb.start();
