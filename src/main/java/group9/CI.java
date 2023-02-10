@@ -8,6 +8,11 @@ import java.io.IOException;
 import java.io.*;
 import java.nio.Buffer;
 
+import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.util.StringContentProvider;
+import org.eclipse.jetty.client.util.StringRequestContent;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.Request;
@@ -16,6 +21,8 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 
+import org.eclipse.jetty.client.HttpClient;
+
 import org.json.JSONObject;
 
 import java.io.FileWriter;
@@ -23,11 +30,13 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Scanner;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
-
 
 /**
  Skeleton of a ContinuousIntegrationServer which acts as webhook
@@ -37,16 +46,18 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class CI extends AbstractHandler
 {
-    static String repo_name = "DD2480-Group-9-CI";
+    private static HttpClient apiClient;
+    private static String accessToken;
+
     public void handle(String target,
                        Request baseRequest,
                        HttpServletRequest request,
                        HttpServletResponse response)
             throws IOException, ServletException
     {
+        long threadID = Thread.currentThread().getId();
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
-        baseRequest.setHandled(true);
 
         if (request.getMethod().equals("POST")){
             // Handle CI
@@ -79,46 +90,76 @@ public class CI extends AbstractHandler
             // Retrieve commit message
             String commitMessage = json.getJSONObject("head_commit").getString("message");
 
-//            // Clone
-//            String projectPath;
-//            try {
-//                projectPath = cloneRepo("");
-//            } catch (Exception e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Compile
-//            String compileResult;
-//            try {
-//                compileResult = compileProject(projectPath);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Test
-//            String testResult;
-//            try {
-//                testResult = testProject(projectPath);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Write log
-//            logToFile("repo", "branch", "commitID",
-//                compileResult, testResult);
-//
-//            // change index.html
-//            generateIndexFile();
-//
-//            // Send notification
-//
+            System.out.println(threadID + " Recieved new push from " + repoName + "/" + branch);
+            System.out.println(threadID + " Cloning...");
 
+            // Clone
+            String projectPath;
+            try {
+                projectPath = cloneRepo("https://github.com/" + repoName + ".git", commitID, threadID);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(threadID + " Cloned! Compiling...");
+
+            // Compile
+            String compileResult;
+            try {
+                compileResult = compileProject(projectPath);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(threadID + " Compiled! Testing...");
+
+            // Test
+            ArrayList<String> testResult;
+            try {
+                testResult = testProject(projectPath);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println(threadID + " Tested! Writing to log file...");
+
+            // Write log
+            logToFile(repoName, branch, commitID, testResult, compileResult, threadID);
+            System.out.println(threadID + " Wrote to log file!");
+
+            // change index.html
+            generateIndexFile();
+
+            // Send notification
+            try {
+                commitStatus(repoName, commitID, compileResult, testResult, threadID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (TimeoutException e) {
+                e.printStackTrace();
+            }
+
+            System.out.println("--- " + threadID + " Push handled ---");
+            System.out.println();
+            baseRequest.setHandled(true);
+
+            //Clean up repo folder
+            try {
+                cleanUp(threadID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
+        //Read the github access token
+        System.out.println("Please enter your GitHub access token (used for commit status):");
+        Scanner input = new Scanner(System.in);
+        accessToken = input.nextLine();
+        input.close();
+
         Server server = new Server(8080);
         ResourceHandler resource_handler = new ResourceHandler();
         resource_handler.setDirectoriesListed(true);
@@ -130,8 +171,15 @@ public class CI extends AbstractHandler
         // Run once before the server starts to make sure there is an index.html file
         generateIndexFile();
 
+        //Start the API client
+        apiClient = new HttpClient();
+        apiClient.setFollowRedirects(false);
+        apiClient.start();
+
         // Start server
         server.start();
+        System.out.println("--Server started--");
+        System.out.println();
         server.join();
     }
 
@@ -143,23 +191,27 @@ public class CI extends AbstractHandler
      * @param   repoURL     Git repository cloning URL
      * @return              An absolute path to the cloned repository
      */
-    public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
+    public static String cloneRepo(String repoURL, String commitID, long threadID)
+            throws IOException, InterruptedException, GitAPIException {
 
         // Remove the old clone of the repo (if it exists)
-        File repo_dir = new File(repo_name);
+        String repo_dir_name = "repository" + threadID;
+        File repo_dir = new File(repo_dir_name);
         if(repo_dir.exists()) {
 
             // Remove the old clone
-            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_name);
+            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_dir_name);
             Process p = pb.start();
             p.waitFor();
             p.destroy();
         }
 
-        // Clone the repo
-        Git git = Git.cloneRepository().setURI(repoURL).call();
+        // Clone the repo branch
+        Git git = Git.cloneRepository().setDirectory(repo_dir).setURI(repoURL).call();
+        git.checkout().setName(commitID).call();
 
-        return "";
+        // Return the absolute path to the cloned repository
+        return repo_dir.getAbsolutePath();
     }
 
     //TODO: Add cd functionality. Need absolute path
@@ -177,6 +229,7 @@ public class CI extends AbstractHandler
 
         // Go into directory and launch mvn compile
         ProcessBuilder pb = new ProcessBuilder("mvn", "compile");
+        pb.directory(new File(projectPath));
 
         // Start process
         Process process = pb.start();
@@ -200,13 +253,10 @@ public class CI extends AbstractHandler
         process.destroy();
 
         // Parse result
-        // Retrieve relevant line and remove unnecessary tokens
-        String lines[]  = result.split("\n");
-        String parsedResult = lines[13].substring(7);
-
-        // Check if it failed
-        if (!parsedResult.equals("BUILD SUCCESS"))
-            parsedResult = "BUILD FAILED";
+        String parsedResult = "BUILD FAILED";
+        // Check if it succeeded
+        if (result.contains("BUILD SUCCESS"))
+            parsedResult = "BUILD SUCCESS";
 
         // Return parsedResults
         return parsedResult;
@@ -222,44 +272,46 @@ public class CI extends AbstractHandler
      */
     public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
+
         // Initialize a processbuilder
         ProcessBuilder pb = new ProcessBuilder();
 
         // Go into directory and launch mvn test
-        pb.command("/bin/bash", "-c", "mvn test");
-        // pb.command("cd", projectPath, ";", "mvn test");
+        pb.directory(new File(projectPath));
+        pb.command("mvn", "test");
 
         // Start process
         Process process = pb.start();
-
         // Initialize bufferreader to read output from process
         BufferedReader reader = new BufferedReader( new InputStreamReader(process.getInputStream()) );
+        StringBuilder builder = new StringBuilder();
         String line = null;
         ArrayList<String> testResult = new ArrayList<String>();
 
         // Iterate all lines and add to builder
         while ( (line = reader.readLine()) != null ) {
             if (line.contains("CITests.") && !line.contains("at group9.")) {
+                line = line.replaceAll("\u001B\\[[;\\d]*m", "");
                 line = line.replaceAll("^\\[ERROR\\]\\s*", "");
                 testResult.add(line);
             }
             if (line.contains("BUILD")) {
+                line = line.replaceAll("\u001B\\[[;\\d]*m", "");
                 line = line.replaceAll("^\\[INFO\\]\\s*", "");
                 testResult.add(line);
             }
+            builder.append(line);
+            builder.append(System.getProperty("line.separator"));
         }
 
         // Wait and kill process
         process.waitFor();
         process.destroy();
 
+        String result = builder.toString();
 
         // Return results
         return testResult;
-    }
-
-    public static void notifyGithub(String compileResult, String testResult){
-
     }
 
     /** logToFile
@@ -273,31 +325,76 @@ public class CI extends AbstractHandler
      * @param testResult an ArrayList of the tests failed, the last element is the build result
      * @throws IOException
      */
-    public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
 
+    public static void logToFile(String repository, String branch, String commitId,
+                                 ArrayList<String> testResult, String compileResult, long threadID) throws IOException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
         Date date = new Date();
         String buildDate = formatter.format(date);
         JSONObject obj = new JSONObject();
+
+        System.out.println(threadID + " Log file name: " + buildDate + ".json");
+
+        String tests ="";
+
+        for(int i = 0; i < testResult.size()-1; i++){
+            if(i == 0) {
+                tests = "Tests failed "  + testResult.get(i);
+            }
+            else {
+                tests = tests + " " + testResult.get(i);
+            }
+        }
+
+        if(tests.length() == 0){
+            tests = "All tests passed";
+        }
 
         obj.put("repository", repository);
         obj.put("branch", branch);
         obj.put("commitId", commitId);
         obj.put("buildDate", buildDate);
         obj.put("compileResult", compileResult);
-        obj.put("testResult", testResult);
+        obj.put("testResult", tests);
 
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));) {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));
             bw.write(obj.toString(4));
             bw.close();
-            System.out.println("Successfully wrote to the file.");
-        } catch (IOException e) {
-            System.out.println("An error occurred while writing to the file.");
-            e.printStackTrace();
+    }
+
+    public static void commitStatus(String repo, String sha, String compileStatus, ArrayList<String> testStatus, long threadID)
+            throws InterruptedException, ExecutionException, TimeoutException {
+        String url = "https://api.github.com/repos/" + repo + "/statuses/" + sha;
+
+        StringBuilder jsonString = new StringBuilder("{\"state\":\"");
+        if(compileStatus == "BUILD FAILED") {
+            jsonString.append("failure\",\"description\":\"Compilation failed");
         }
+        else if(testStatus.size() < 2) { //Success
+            jsonString.append("success\",\"description\":\"Compilation possible and all tests passes");
+        } else {
+            jsonString.append("failure\",\"description\":\"Tests failed:");
+            for(int i = 0; i < testStatus.size() - 1; i++){ //Print all test failures
+                jsonString.append(" " + testStatus.get(i));
+            }
+        }
+        jsonString.append("\",\"context\":\"ci-server\"}");
+        String jsonPayload = jsonString.toString();
+
+        org.eclipse.jetty.client.api.Request apiRequest = apiClient.POST(url);
+
+        //Per the GitHub api docs
+        apiRequest.header(HttpHeader.ACCEPT, "application/vnd.github+json");
+        apiRequest.header(HttpHeader.CONTENT_TYPE, "application/json");
+        apiRequest.header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken);
+        apiRequest.body(new StringRequestContent(jsonPayload));
+
+        System.out.println(threadID + " Updating commit status of commit " + sha);
+        ContentResponse response = apiRequest.send();
+        System.out.println(threadID + " Reply: " + response.getContentAsString());
     }
 
     /**
@@ -331,5 +428,17 @@ public class CI extends AbstractHandler
         bw.write("</ul>");
         bw.write("</body></html>");
         bw.close();
+    }
+
+    private void cleanUp(long threadID) throws IOException, InterruptedException {
+        String repo_dir_name = "repository" + threadID;
+        File repo_dir = new File(repo_dir_name);
+        if(repo_dir.exists()) {
+            // Cleanup the repo
+            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_dir_name);
+            Process p = pb.start();
+            p.waitFor();
+            p.destroy();
+        }
     }
 }
