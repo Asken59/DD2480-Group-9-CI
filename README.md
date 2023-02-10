@@ -33,3 +33,4 @@ All members of group 9 have contributed to this project, either through direct c
 Due to the size of this project being quite small, especially code related, pair programming was utilized to a greater deal than in the previous project *DECIDE*.
 
 ## Essence of the team
+We evaluated that according to the essence checklist (p. 52), we are working on the "Adjourned" level. This is because we fulfill all the checklist items before "Adjourned" in addition to the ones directly linked to "Adjourned". The teams responsibility have passed on and been fulfilled and the team will no longer be putting effort into completing the mission. The team is also available for assignments to other teams.
