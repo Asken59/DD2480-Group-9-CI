@@ -228,13 +228,10 @@ public class CI extends AbstractHandler
         process.destroy();
 
         // Parse result
-        // Retrieve relevant line and remove unnecessary tokens
-        String lines[]  = result.split("\n");
-        String parsedResult = lines[13].substring(7);
-
-        // Check if it failed
-        if (!parsedResult.equals("BUILD SUCCESS"))
-            parsedResult = "BUILD FAILED";
+        String parsedResult = "BUILD FAILED";
+        // Check if it succeeded
+        if (result.contains("BUILD SUCCESS"))
+            parsedResult = "BUILD SUCCESS";
 
         // Return parsedResults
         return parsedResult;
