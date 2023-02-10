@@ -183,6 +183,14 @@ public class CI extends AbstractHandler
         server.join();
     }
 
+    /**
+     * The method will attempt to clone a specified repository at a fixed path.
+     * If there exists a previously cloned repository at the location, the method will remove it.
+     * JGit is used to clone the repository.
+     *
+     * @param   repoURL     Git repository cloning URL
+     * @return              An absolute path to the cloned repository
+     */
     public static String cloneRepo(String repoURL, String commitID, long threadID)
             throws IOException, InterruptedException, GitAPIException {
 
@@ -213,6 +221,8 @@ public class CI extends AbstractHandler
      * is parsed and returned.
      * @param projectPath path to the project that should be compiled.
      * @return Returns either "BUILD SUCCESS" or "BUILD FAILED" depending on compile result.
+     * @throws  IOException
+     * @throws  InterruptedException
     */
     public static String compileProject(String projectPath) throws IOException, InterruptedException {
 
@@ -252,6 +262,14 @@ public class CI extends AbstractHandler
         return parsedResult;
     }
 
+    /** testProject
+     * The method will attempt to run all tests in the project at the given path.
+     * Test is preformed with mvn test and the result of the command
+     * is parsed and returned.
+     * @param projectPath path to the project that should be compiled.
+     * @return Returns either "BUILD SUCCESS" or "BUILD FAILED" with the
+     * corresponding tests which failed, depending on compile result.
+     */
     public static ArrayList<String> testProject(String projectPath) throws IOException, InterruptedException {
 
 
@@ -296,6 +314,17 @@ public class CI extends AbstractHandler
         return testResult;
     }
 
+    /** logToFile
+     * The method will create and write to the build log file
+     * A time stamp for the build is created when this method is run
+     * writes the new json file to the build-logs directory
+     * @param repository the repository of the project.
+     * @param branch the current branch being worked on
+     * @param commitId the commit ID of the current commit
+     * @param compileResult the result of the compilation
+     * @param testResult an ArrayList of the tests failed, the last element is the build result
+     * @throws IOException
+     */
 
     public static void logToFile(String repository, String branch, String commitId,
                                  ArrayList<String> testResult, String compileResult, long threadID) throws IOException {
@@ -368,15 +397,23 @@ public class CI extends AbstractHandler
         System.out.println(threadID + " Reply: " + response.getContentAsString());
     }
 
-
+    /**
+     * The method will generate an index.html file in the root directory.
+     * The file created will contain an unordered list of links to all build logs
+     * so that they can be visited and viewed in JSON format in a web browser.
+     */
     public static void generateIndexFile() throws IOException {
 
+        // Find the "build-logs" directory
         File json_dir = new File("build-logs");
 
+        // Write to a new file "index.html" and place it in the root directory.
+        // An existing "index.html" file will be overwritten.
         BufferedWriter bw = new BufferedWriter(new FileWriter(new File("index.html"), false));
         bw.write("<html><body>");
         bw.write("<ul>");
 
+        // Dynamically write HTML links to "index.html" for all build logs in the "build-logs" directory
         for(File log : json_dir.listFiles()){
             bw.write("<li>");
             bw.write("<a href='/build-logs/");
@@ -387,10 +424,10 @@ public class CI extends AbstractHandler
             bw.write("</li>");
         }
 
+        // Wrap up and close the writer
         bw.write("</ul>");
         bw.write("</body></html>");
         bw.close();
-
     }
 
     private void cleanUp(long threadID) throws IOException, InterruptedException {
