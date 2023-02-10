@@ -55,9 +55,9 @@ public class CI extends AbstractHandler
                        HttpServletResponse response)
             throws IOException, ServletException
     {
+        
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
-        baseRequest.setHandled(true);
 
         if (request.getMethod().equals("POST")){
             // Handle CI
@@ -134,6 +134,7 @@ public class CI extends AbstractHandler
             }
             System.out.println("--- Push handled ---");
             System.out.println();
+            baseRequest.setHandled(true);
         }
     }
 
@@ -336,7 +337,7 @@ public class CI extends AbstractHandler
                 jsonString.append(" " + testStatus.get(i));
             }
         }
-
+        jsonString.append("\"}");
         String jsonPayload = jsonString.toString();
 
         org.eclipse.jetty.client.api.Request apiRequest = apiClient.POST(url);
