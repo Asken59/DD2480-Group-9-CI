@@ -357,4 +357,24 @@ public class CI extends AbstractHandler
         bw.close();
 
     }
+
+    /**
+     * This method should check out a specified remote branch in the cloned git repository.
+     *
+     * @param   branchName              Name of the remote branch to check out
+     * @throws  IOException
+     * @throws  InterruptedException
+     */
+    public static void checkoutBranch(String branchName) throws IOException, InterruptedException {
+
+        // Set up a ProcessBuilder and specify necessary commands
+        ProcessBuilder pb = new ProcessBuilder("cd", "repository", ";", "git", "checkout", branchName);
+
+        // Start a process and execute the commands
+        Process p = pb.start();
+
+        // Wait for the process to complete its task and then destroy it.
+        p.waitFor();
+        p.destroy();
+    }
 }
