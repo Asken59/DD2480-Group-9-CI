@@ -1,7 +1,7 @@
 # Continuous Integration
 This project is a continues integration server that will compile and test your GitHub repo. 
 It will notify if a commit passes, through the commit status on GitHub. **Note** that for commit status notifications to work the server requires a GitHub token with the commit status read/write permissions to be entered at start.  
-Logs of its builds will also be saved and accessible through the url <url-to-server>/index.html.
+Logs of its builds will also be saved and accessible through the url: server-url/index.html.
 
 ## Compiling and testing this repo
 If you are a contributor to this repo or just want to compile from source, you may easily do so with Maven.
@@ -12,6 +12,9 @@ To execute and start the server you may use `$ mvn exec:java -Dexec.mainClass="g
 Cleaning up after package builds is easily done with `$ mvn clean`
 
 For running the tests simply use `$ mvn test`.
+
+To generate a JAVADOC .html file simply run `$mvn javadoc:javadoc`. 
+The generated docs will be found in `target/site/apidocs/group9/`.
 
 ## Implementation of compile, test and notify
 
