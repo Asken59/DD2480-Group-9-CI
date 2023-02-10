@@ -29,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
@@ -121,7 +122,7 @@ public class CI extends AbstractHandler
             System.out.println(threadID + " Tested! Writing to log file...");
 
             // Write log
-            logToFile(repoName, branch, commitID, testResult, compileResult, threadID);
+            logToFile(repoName, branch, commitID, commitMessage, testResult, compileResult, threadID);
             System.out.println(threadID + " Wrote to log file!");
 
             // change index.html
@@ -320,11 +321,13 @@ public class CI extends AbstractHandler
      * @param repository the repository of the project.
      * @param branch the current branch being worked on
      * @param commitId the commit ID of the current commit
+     * @param commitMessage the message of the current commit
      * @param compileResult the result of the compilation
      * @param testResult an ArrayList of the tests failed, the last element is the build result
      * @throws IOException
      */
-    public static void logToFile(String repository, String branch, String commitId,
+
+    public static void logToFile(String repository, String branch, String commitId, String commitMessage,
                                  ArrayList<String> testResult, String compileResult, long threadID) throws IOException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
         Date date = new Date();
@@ -351,6 +354,7 @@ public class CI extends AbstractHandler
         obj.put("repository", repository);
         obj.put("branch", branch);
         obj.put("commitId", commitId);
+        obj.put("commitMessage", commitMessage);
         obj.put("buildDate", buildDate);
         obj.put("compileResult", compileResult);
         obj.put("testResult", tests);
@@ -422,9 +426,11 @@ public class CI extends AbstractHandler
         BufferedWriter bw = new BufferedWriter(new FileWriter(new File("index.html"), false));
         bw.write("<html><body>");
         bw.write("<ul>");
+        File[] logs = json_dir.listFiles();
+        Arrays.sort(logs);
 
         // Dynamically write HTML links to "index.html" for all build logs in the "build-logs" directory
-        for(File log : json_dir.listFiles()){
+        for(File log : logs){
             bw.write("<li>");
             bw.write("<a href='/build-logs/");
             bw.write(log.getName());
