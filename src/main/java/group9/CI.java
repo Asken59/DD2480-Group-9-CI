@@ -55,9 +55,9 @@ public class CI extends AbstractHandler
                        HttpServletResponse response)
             throws IOException, ServletException
     {
+        
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
-        baseRequest.setHandled(true);
 
         if (request.getMethod().equals("POST")){
             // Handle CI
@@ -90,39 +90,51 @@ public class CI extends AbstractHandler
             // Retrieve commit message
             String commitMessage = json.getJSONObject("head_commit").getString("message");
 
-//            // Clone
-//            String projectPath;
-//            try {
-//                projectPath = cloneRepo("");
-//            } catch (Exception e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Compile
-//            String compileResult;
-//            try {
-//                compileResult = compileProject(projectPath);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Test
-//            String testResult;
-//            try {
-//                testResult = testProject(projectPath);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Write log
-//            logToFile("repo", "branch", "commitID",
-//                compileResult, testResult);
-//
-//            // change index.html
-//            generateIndexFile();
-//
-//            // Send notification
-//            commitStatus("owner/repo", "commit sha", "success" or "failure", "message");
+            System.out.println("Recieved new push from " + repoName + "/" + branch);
+            System.out.println("Cloning...");
+            // Clone
+            String projectPath;
+            try {
+                projectPath = cloneRepo("https://github.com/" + repoName + ".git", commitID);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Cloned! Compiling...");
+            // Compile
+            String compileResult;
+            try {
+                compileResult = compileProject(projectPath);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Compiled! Testing...");
+            // Test
+            ArrayList<String> testResult;
+            try {
+                testResult = testProject(projectPath);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Tested! Writing to log file...");
+            // Write log
+            logToFile(repoName, branch, commitID, testResult, compileResult);
+            System.out.println("Wrote to log file!");
+            // change index.html
+            generateIndexFile();
+
+            // Send notification
+            try {
+                commitStatus(repoName, commitID, compileResult, testResult);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (TimeoutException e) {
+                e.printStackTrace();
+            }
+            System.out.println("--- Push handled ---");
+            System.out.println();
+            baseRequest.setHandled(true);
         }
     }
 
@@ -153,10 +165,12 @@ public class CI extends AbstractHandler
 
         // Start server
         server.start();
+        System.out.println("--Server started--");
+        System.out.println();
         server.join();
     }
 
-    public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
+    public static String cloneRepo(String repoURL, String commitID) throws IOException, InterruptedException, GitAPIException {
 
         // Remove the old clone of the repo (if it exists)
         String repo_dir_name = "repository";
@@ -170,8 +184,9 @@ public class CI extends AbstractHandler
             p.destroy();
         }
 
-        // Clone the repo
+        // Clone the repo branch
         Git git = Git.cloneRepository().setDirectory(repo_dir).setURI(repoURL).call();
+        git.checkout().setName(commitID).call();
 
         // Return the absolute path to the cloned repository
         return repo_dir.getAbsolutePath();
@@ -244,10 +259,12 @@ public class CI extends AbstractHandler
         // Iterate all lines and add to builder
         while ( (line = reader.readLine()) != null ) {
             if (line.contains("CITests.") && !line.contains("at group9.")) {
+                line = line.replaceAll("\u001B\\[[;\\d]*m", "");
                 line = line.replaceAll("^\\[ERROR\\]\\s*", "");
                 testResult.add(line);
             }
             if (line.contains("BUILD")) {
+                line = line.replaceAll("\u001B\\[[;\\d]*m", "");
                 line = line.replaceAll("^\\[INFO\\]\\s*", "");
                 testResult.add(line);
             }
@@ -272,14 +289,16 @@ public class CI extends AbstractHandler
         String buildDate = formatter.format(date);
         JSONObject obj = new JSONObject();
 
+        System.out.println("Log file name: " + buildDate + ".json");
+
         String tests ="";
 
         for(int i = 0; i < testResult.size()-1; i++){
             if(i == 0) {
-                tests = "Tests failed + " + tests + testResult.get(i);
+                tests = "Tests failed "  + testResult.get(i);
             }
             else {
-                tests = ", " + testResult.get(i);
+                tests = tests + " " + testResult.get(i);
             }
         }
 
@@ -297,25 +316,29 @@ public class CI extends AbstractHandler
         File json_dir = new File("build-logs");
         String file_name = "build-" + buildDate + ".json";
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));) {
+        BufferedWriter bw = new BufferedWriter(new FileWriter(new File(json_dir, file_name), false));
             bw.write(obj.toString(4));
             bw.close();
-            System.out.println("Successfully wrote to the file.");
-        } catch (IOException e) {
-            System.out.println("An error occurred while writing to the file.");
-            e.printStackTrace();
-        }
     }
 
-    public static void commitStatus(String repo, String sha, String buildStatus, String message)
+    public static void commitStatus(String repo, String sha, String compileStatus, ArrayList<String> testStatus)
             throws InterruptedException, ExecutionException, TimeoutException {
         String url = "https://api.github.com/repos/" + repo + "/statuses/" + sha;
 
-        String jsonPayload = "";
-        if(message.length() == 0)
-            jsonPayload = "{\"state\":\"" + buildStatus + "\"}";
-        else
-            jsonPayload = "{\"state\":\"" + buildStatus + "\",\"description\":\"" + message + "\"}";
+        StringBuilder jsonString = new StringBuilder("{\"state\":\"");
+        if(compileStatus == "BUILD FAILED") {
+            jsonString.append("failure\",\"description\":\"Compilation failed");
+        }
+        else if(testStatus.size() < 2) { //Success
+            jsonString.append("success\",\"description\":\"Compilation possible and all tests passes");
+        } else {
+            jsonString.append("failure\",\"description\":\"Tests failed:");
+            for(int i = 0; i < testStatus.size() - 1; i++){ //Print all test failures
+                jsonString.append(" " + testStatus.get(i));
+            }
+        }
+        jsonString.append("\"}");
+        String jsonPayload = jsonString.toString();
 
         org.eclipse.jetty.client.api.Request apiRequest = apiClient.POST(url);
 
@@ -353,26 +376,5 @@ public class CI extends AbstractHandler
         bw.write("</body></html>");
         bw.close();
 
-    }
-
-    /**
-     * This method should check out a specified remote branch in the cloned git repository.
-     *
-     * @param   branchName              Name of the remote branch to check out
-     * @throws  IOException
-     * @throws  InterruptedException
-     */
-    public static void checkoutBranch(String branchName) throws IOException, InterruptedException {
-
-        // Set up a ProcessBuilder and specify necessary commands
-        ProcessBuilder pb = new ProcessBuilder("git", "checkout", branchName);
-        pb.directory(new File("repository"));
-
-        // Start a process and execute the commands
-        Process p = pb.start();
-
-        // Wait for the process to complete its task and then destroy it.
-        p.waitFor();
-        p.destroy();
     }
 }
