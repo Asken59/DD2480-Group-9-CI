@@ -55,7 +55,7 @@ public class CI extends AbstractHandler
                        HttpServletResponse response)
             throws IOException, ServletException
     {
-        
+        long threadID = Thread.currentThread().getId();
         response.setContentType("text/html;charset=utf-8");
         response.setStatus(HttpServletResponse.SC_OK);
 
@@ -90,16 +90,18 @@ public class CI extends AbstractHandler
             // Retrieve commit message
             String commitMessage = json.getJSONObject("head_commit").getString("message");
 
-            System.out.println("Recieved new push from " + repoName + "/" + branch);
-            System.out.println("Cloning...");
+            System.out.println(threadID + " Recieved new push from " + repoName + "/" + branch);
+            System.out.println(threadID + " Cloning...");
+
             // Clone
             String projectPath;
             try {
-                projectPath = cloneRepo("https://github.com/" + repoName + ".git", commitID);
+                projectPath = cloneRepo("https://github.com/" + repoName + ".git", commitID, threadID);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("Cloned! Compiling...");
+            System.out.println(threadID + " Cloned! Compiling...");
+
             // Compile
             String compileResult;
             try {
@@ -107,7 +109,8 @@ public class CI extends AbstractHandler
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("Compiled! Testing...");
+            System.out.println(threadID + " Compiled! Testing...");
+
             // Test
             ArrayList<String> testResult;
             try {
@@ -115,16 +118,18 @@ public class CI extends AbstractHandler
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            System.out.println("Tested! Writing to log file...");
+            System.out.println(threadID + " Tested! Writing to log file...");
+
             // Write log
-            logToFile(repoName, branch, commitID, testResult, compileResult);
-            System.out.println("Wrote to log file!");
+            logToFile(repoName, branch, commitID, testResult, compileResult, threadID);
+            System.out.println(threadID + " Wrote to log file!");
+
             // change index.html
             generateIndexFile();
 
             // Send notification
             try {
-                commitStatus(repoName, commitID, compileResult, testResult);
+                commitStatus(repoName, commitID, compileResult, testResult, threadID);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (ExecutionException e) {
@@ -132,9 +137,17 @@ public class CI extends AbstractHandler
             } catch (TimeoutException e) {
                 e.printStackTrace();
             }
-            System.out.println("--- Push handled ---");
+
+            System.out.println("--- " + threadID + " Push handled ---");
             System.out.println();
             baseRequest.setHandled(true);
+
+            //Clean up repo folder
+            try {
+                cleanUp(threadID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -170,10 +183,11 @@ public class CI extends AbstractHandler
         server.join();
     }
 
-    public static String cloneRepo(String repoURL, String commitID) throws IOException, InterruptedException, GitAPIException {
+    public static String cloneRepo(String repoURL, String commitID, long threadID)
+            throws IOException, InterruptedException, GitAPIException {
 
         // Remove the old clone of the repo (if it exists)
-        String repo_dir_name = "repository";
+        String repo_dir_name = "repository" + threadID;
         File repo_dir = new File(repo_dir_name);
         if(repo_dir.exists()) {
 
@@ -283,13 +297,14 @@ public class CI extends AbstractHandler
     }
 
 
-    public static void logToFile(String repository, String branch, String commitId, ArrayList<String> testResult, String compileResult) throws IOException {
+    public static void logToFile(String repository, String branch, String commitId,
+                                 ArrayList<String> testResult, String compileResult, long threadID) throws IOException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
         Date date = new Date();
         String buildDate = formatter.format(date);
         JSONObject obj = new JSONObject();
 
-        System.out.println("Log file name: " + buildDate + ".json");
+        System.out.println(threadID + " Log file name: " + buildDate + ".json");
 
         String tests ="";
 
@@ -321,7 +336,7 @@ public class CI extends AbstractHandler
             bw.close();
     }
 
-    public static void commitStatus(String repo, String sha, String compileStatus, ArrayList<String> testStatus)
+    public static void commitStatus(String repo, String sha, String compileStatus, ArrayList<String> testStatus, long threadID)
             throws InterruptedException, ExecutionException, TimeoutException {
         String url = "https://api.github.com/repos/" + repo + "/statuses/" + sha;
 
@@ -337,7 +352,7 @@ public class CI extends AbstractHandler
                 jsonString.append(" " + testStatus.get(i));
             }
         }
-        jsonString.append("\"}");
+        jsonString.append("\",\"context\":\"ci-server\"}");
         String jsonPayload = jsonString.toString();
 
         org.eclipse.jetty.client.api.Request apiRequest = apiClient.POST(url);
@@ -348,9 +363,9 @@ public class CI extends AbstractHandler
         apiRequest.header(HttpHeader.AUTHORIZATION, "Bearer " + accessToken);
         apiRequest.body(new StringRequestContent(jsonPayload));
 
-        System.out.println("Updating commit status of commit " + sha);
+        System.out.println(threadID + " Updating commit status of commit " + sha);
         ContentResponse response = apiRequest.send();
-        System.out.println("Reply: " + response.getContentAsString());
+        System.out.println(threadID + " Reply: " + response.getContentAsString());
     }
 
 
@@ -376,5 +391,17 @@ public class CI extends AbstractHandler
         bw.write("</body></html>");
         bw.close();
 
+    }
+
+    private void cleanUp(long threadID) throws IOException, InterruptedException {
+        String repo_dir_name = "repository" + threadID;
+        File repo_dir = new File(repo_dir_name);
+        if(repo_dir.exists()) {
+            // Cleanup the repo
+            ProcessBuilder pb = new ProcessBuilder("rm", "-r", repo_dir_name);
+            Process p = pb.start();
+            p.waitFor();
+            p.destroy();
+        }
     }
 }
