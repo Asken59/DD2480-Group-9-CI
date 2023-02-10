@@ -322,6 +322,7 @@ public class CI extends AbstractHandler
      * @param repository the repository of the project.
      * @param branch the current branch being worked on
      * @param commitId the commit ID of the current commit
+     * @param commitMessage the message of the current commit
      * @param compileResult the result of the compilation
      * @param testResult an ArrayList of the tests failed, the last element is the build result
      * @throws IOException
