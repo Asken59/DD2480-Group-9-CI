@@ -215,7 +215,6 @@ public class CI extends AbstractHandler
         return repo_dir.getAbsolutePath();
     }
 
-    //TODO: Add cd functionality. Need absolute path
     /** compileProject
      * The method will attempt to compile the project at the given path.
      * Compilation is preformed with mvn compile and the result of the command
@@ -368,6 +367,18 @@ public class CI extends AbstractHandler
             bw.close();
     }
 
+    /** commitStatus
+     * The method will try to send a POST request to github and updates commit status with
+     * the github API
+     * @param repo Name of the gitrepo
+     * @param sha Commit ID
+     * @param compileStatus If the project compiled or not
+     * @param testStatus If the tests succeded or not
+     * @param threadID Identical ID of current thread
+     * @throws ExecutionException
+     * @throws InterruptedException
+     * @throws TimeoutException
+     */
     public static void commitStatus(String repo, String sha, String compileStatus, ArrayList<String> testStatus, long threadID)
             throws InterruptedException, ExecutionException, TimeoutException {
         String url = "https://api.github.com/repos/" + repo + "/statuses/" + sha;
@@ -435,6 +446,12 @@ public class CI extends AbstractHandler
         bw.close();
     }
 
+    /** cleanUp
+     * The method removes the repositories which was created
+     * @param threadID Identical ID of current thread
+     * @throws  IOException
+     * @throws  InterruptedException
+     */
     private void cleanUp(long threadID) throws IOException, InterruptedException {
         String repo_dir_name = "repository" + threadID;
         File repo_dir = new File(repo_dir_name);
