@@ -135,6 +135,14 @@ public class CI extends AbstractHandler
         server.join();
     }
 
+    /**
+     * The method will attempt to clone a specified repository at a fixed path.
+     * If there exists a previously cloned repository at the location, the method will remove it.
+     * JGit is used to clone the repository.
+     *
+     * @param   repoURL     Git repository cloning URL
+     * @return              An absolute path to the cloned repository
+     */
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
 
         // Remove the old clone of the repo (if it exists)
