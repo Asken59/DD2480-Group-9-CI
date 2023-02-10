@@ -90,39 +90,53 @@ public class CI extends AbstractHandler
             // Retrieve commit message
             String commitMessage = json.getJSONObject("head_commit").getString("message");
 
-//            // Clone
-//            String projectPath;
-//            try {
-//                projectPath = cloneRepo("");
-//            } catch (Exception e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Compile
-//            String compileResult;
-//            try {
-//                compileResult = compileProject(projectPath);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Test
-//            String testResult;
-//            try {
-//                testResult = testProject(projectPath);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            // Write log
-//            logToFile("repo", "branch", "commitID",
-//                compileResult, testResult);
-//
-//            // change index.html
-//            generateIndexFile();
-//
-//            // Send notification
-//            commitStatus("owner/repo", "commit sha", "success" or "failure", "message");
+            // Clone
+            String projectPath;
+            try {
+                projectPath = cloneRepo("https://github.com/" + repoName + ".git");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            //Checkout
+            try{
+                checkoutBranch(branch);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // Compile
+            String compileResult;
+            try {
+                compileResult = compileProject(projectPath);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            // Test
+            ArrayList<String> testResult;
+            try {
+                testResult = testProject(projectPath);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            // Write log
+            logToFile(repoName, branch, commitID, testResult, compileResult);
+
+            // change index.html
+            generateIndexFile();
+
+            // Send notification
+            try {
+                commitStatus(repoName, commitID, compileResult, testResult);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (TimeoutException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -310,15 +324,25 @@ public class CI extends AbstractHandler
         }
     }
 
-    public static void commitStatus(String repo, String sha, String buildStatus, String message)
+    public static void commitStatus(String repo, String sha, String compileStatus, ArrayList<String> testStatus)
             throws InterruptedException, ExecutionException, TimeoutException {
         String url = "https://api.github.com/repos/" + repo + "/statuses/" + sha;
 
-        String jsonPayload = "";
-        if(message.length() == 0)
-            jsonPayload = "{\"state\":\"" + buildStatus + "\"}";
-        else
-            jsonPayload = "{\"state\":\"" + buildStatus + "\",\"description\":\"" + message + "\"}";
+        StringBuilder jsonString = new StringBuilder("{\"state\":\"");
+        if(compileStatus == "BUILD FAILED") {
+            jsonString.append("failure\",\"description\":\"Compilation failed\"}");
+        }
+        else if(testStatus.size() < 2) { //Success
+            jsonString.append("success\",\"description\":\"Compilation possible and all tests passes\"}");
+        } else {
+            jsonString.append("failure\",\"description\":\"Tests failed:");
+            for(int i = 1; i < testStatus.size() - 1; i++){
+                jsonString.append(" " + testStatus.get(i));
+            }
+            jsonString.append("\"}");
+        }
+
+        String jsonPayload = jsonString.toString();
 
         org.eclipse.jetty.client.api.Request apiRequest = apiClient.POST(url);
 
