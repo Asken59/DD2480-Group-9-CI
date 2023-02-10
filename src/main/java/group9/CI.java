@@ -121,7 +121,7 @@ public class CI extends AbstractHandler
             System.out.println(threadID + " Tested! Writing to log file...");
 
             // Write log
-            logToFile(repoName, branch, commitID, testResult, compileResult, threadID);
+            logToFile(repoName, branch, commitID, commitMessage, testResult, compileResult, threadID);
             System.out.println(threadID + " Wrote to log file!");
 
             // change index.html
@@ -326,7 +326,7 @@ public class CI extends AbstractHandler
      * @throws IOException
      */
 
-    public static void logToFile(String repository, String branch, String commitId,
+    public static void logToFile(String repository, String branch, String commitId, String commitMessage,
                                  ArrayList<String> testResult, String compileResult, long threadID) throws IOException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
         Date date = new Date();
@@ -353,6 +353,7 @@ public class CI extends AbstractHandler
         obj.put("repository", repository);
         obj.put("branch", branch);
         obj.put("commitId", commitId);
+        obj.put("commitMessage", commitMessage);
         obj.put("buildDate", buildDate);
         obj.put("compileResult", compileResult);
         obj.put("testResult", tests);
