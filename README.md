@@ -1,4 +1,4 @@
-# Continues Integration
+# Continuous Integration
 This project is a continues integration server that will compile and test your GitHub repo. 
 It will notify if a commit passes, through the commit status on GitHub. **Note** that for commit status notifications to work the server requires a GitHub token with the commit status read/write permissions to be entered at start.  
 Logs of its builds will also be saved and accessible through the url <url-to-server>/index.html.
