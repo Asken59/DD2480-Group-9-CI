@@ -169,6 +169,8 @@ public class CI extends AbstractHandler
      * is parsed and returned.
      * @param projectPath path to the project that should be compiled.
      * @return Returns either "BUILD SUCCESS" or "BUILD FAILED" depending on compile result.
+     * @throws  IOException
+     * @throws  InterruptedException
     */
     public static String compileProject(String projectPath) throws IOException, InterruptedException {
 
