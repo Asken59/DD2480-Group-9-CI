@@ -13,6 +13,21 @@ Cleaning up after package builds is easily done with `$ mvn clean`
 
 For running the tests simply use `$ mvn test`.
 
+## Implementation and unit testing of compilation and testing
+
+### Compilation
+Compilation was implemented by calling the "mvn compile" command in the repository direcotry and then capturing and
+parsing the output of the command to determin if the compilation failed or succeded. The testing was done by aoutomated
+unit tests that run the method on two subprojects. One of these subproject can not be compiled while the other can be
+compiled the tests will pass if the method gives the correct output. 
+
+### Test
+Testing was implemented by calling the "mvn test" command in the repository direcotry and then capturing and
+parsing the output of the command to determin if the tests failed or succeded. The testing was done by aoutomated
+unit tests that run the method on two subprojects. One of these subprojects has tests that fail while the other has
+tests that pass. The automated tests will pass if the method gives the correct output. 
+
+
 ## Contributions
 All members of group 9 have contributed to this project, either through direct commits or by pair programming. 
 Due to the size of this project being quite small, especially code related, pair programming was utilized to a greater deal than in the previous project *DECIDE*.
