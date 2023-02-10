@@ -258,10 +258,12 @@ public class CI extends AbstractHandler
         // Iterate all lines and add to builder
         while ( (line = reader.readLine()) != null ) {
             if (line.contains("CITests.") && !line.contains("at group9.")) {
+                line = line.replaceAll("\u001B\\[[;\\d]*m", "");
                 line = line.replaceAll("^\\[ERROR\\]\\s*", "");
                 testResult.add(line);
             }
             if (line.contains("BUILD")) {
+                line = line.replaceAll("\u001B\\[[;\\d]*m", "");
                 line = line.replaceAll("^\\[INFO\\]\\s*", "");
                 testResult.add(line);
             }
@@ -290,10 +292,10 @@ public class CI extends AbstractHandler
 
         for(int i = 0; i < testResult.size()-1; i++){
             if(i == 0) {
-                tests = "Tests failed + " + tests + testResult.get(i);
+                tests = "Tests failed "  + testResult.get(i);
             }
             else {
-                tests = ", " + testResult.get(i);
+                tests = tests + " " + testResult.get(i);
             }
         }
 
@@ -327,17 +329,17 @@ public class CI extends AbstractHandler
 
         StringBuilder jsonString = new StringBuilder("{\"state\":\"");
         if(compileStatus == "BUILD FAILED") {
-            jsonString.append("failure\",\"description\":\"Compilation failed\"}");
+            jsonString.append("failure\",\"description\":\"Compilation failed\"");
         }
         else if(testStatus.size() < 2) { //Success
-            jsonString.append("success\",\"description\":\"Compilation possible and all tests passes\"}");
+            jsonString.append("success\",\"description\":\"Compilation possible and all tests passes\"");
         } else {
             jsonString.append("failure\",\"description\":\"Tests failed:");
-            for(int i = 1; i < testStatus.size() - 1; i++){
+            for(int i = 0; i < testStatus.size() - 1; i++){ //Print all test failures
                 jsonString.append(" " + testStatus.get(i));
             }
-            jsonString.append("\"}");
         }
+        jsonString.append("\",\"context\":\"ci-server\"}");
 
         String jsonPayload = jsonString.toString();
 
