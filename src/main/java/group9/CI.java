@@ -29,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
@@ -361,8 +362,10 @@ public class CI extends AbstractHandler
         BufferedWriter bw = new BufferedWriter(new FileWriter(new File("index.html"), false));
         bw.write("<html><body>");
         bw.write("<ul>");
+        File[] logs = json_dir.listFiles();
+        Arrays.sort(logs);
 
-        for(File log : json_dir.listFiles()){
+        for(File log : logs){
             bw.write("<li>");
             bw.write("<a href='/build-logs/");
             bw.write(log.getName());
