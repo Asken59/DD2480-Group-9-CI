@@ -129,31 +129,32 @@ public class CI extends AbstractHandler
     // used to start the CI server in command line
     public static void main(String[] args) throws Exception
     {
-        //Read the github access token
-        System.out.println("Please enter your GitHub access token (used for commit status):");
-        Scanner input = new Scanner(System.in);
-        accessToken = input.nextLine();
-        input.close();
-
-        Server server = new Server(8080);
-        ResourceHandler resource_handler = new ResourceHandler();
-        resource_handler.setDirectoriesListed(true);
-        resource_handler.setResourceBase(".");
-        HandlerList handlers = new HandlerList();
-        handlers.setHandlers(new Handler[] { resource_handler, new CI() });
-        server.setHandler(handlers);
-
-        // Run once before the server starts to make sure there is an index.html file
-        generateIndexFile();
-
-        //Start the API client
-        apiClient = new HttpClient();
-        apiClient.setFollowRedirects(false);
-        apiClient.start();
-
-        // Start server
-        server.start();
-        server.join();
+        checkoutBranch("test");
+//        //Read the github access token
+//        System.out.println("Please enter your GitHub access token (used for commit status):");
+//        Scanner input = new Scanner(System.in);
+//        accessToken = input.nextLine();
+//        input.close();
+//
+//        Server server = new Server(8080);
+//        ResourceHandler resource_handler = new ResourceHandler();
+//        resource_handler.setDirectoriesListed(true);
+//        resource_handler.setResourceBase(".");
+//        HandlerList handlers = new HandlerList();
+//        handlers.setHandlers(new Handler[] { resource_handler, new CI() });
+//        server.setHandler(handlers);
+//
+//        // Run once before the server starts to make sure there is an index.html file
+//        generateIndexFile();
+//
+//        //Start the API client
+//        apiClient = new HttpClient();
+//        apiClient.setFollowRedirects(false);
+//        apiClient.start();
+//
+//        // Start server
+//        server.start();
+//        server.join();
     }
 
     public static String cloneRepo(String repoURL) throws IOException, InterruptedException, GitAPIException {
@@ -368,7 +369,8 @@ public class CI extends AbstractHandler
     public static void checkoutBranch(String branchName) throws IOException, InterruptedException {
 
         // Set up a ProcessBuilder and specify necessary commands
-        ProcessBuilder pb = new ProcessBuilder("cd", "repository", ";", "git", "checkout", branchName);
+        ProcessBuilder pb = new ProcessBuilder("git", "checkout", branchName);
+        pb.directory(new File("repository"));
 
         // Start a process and execute the commands
         Process p = pb.start();
