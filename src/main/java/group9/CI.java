@@ -262,6 +262,17 @@ public class CI extends AbstractHandler
 
     }
 
+    /** logToFile
+     * The method will create and write to the build log file
+     * A time stamp for the build is created when this method is run
+     * writes the new json file to the build-logs directory
+     * @param repository the repository of the project.
+     * @param branch the current branch being worked on
+     * @param commitId the commit ID of the current commit
+     * @param compileResult the result of the compilation
+     * @param testResult an ArrayList of the tests failed, the last element is the build result
+     * @throws IOException
+     */
     public static void logToFile(String repository, String branch, String commitId, String compileResult, String testResult) throws IOException {
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd-HHmmss");
