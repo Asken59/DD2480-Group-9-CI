@@ -287,14 +287,23 @@ public class CI extends AbstractHandler
         }
     }
 
+    /**
+     * The method will generate an index.html file in the root directory.
+     * The file created will contain an unordered list of links to all build logs
+     * so that they can be visited and viewed in JSON format in a web browser.
+     */
     public static void generateIndexFile() throws IOException {
 
+        // Find the "build-logs" directory
         File json_dir = new File("build-logs");
 
+        // Write to a new file "index.html" and place it in the root directory.
+        // An existing "index.html" file will be overwritten.
         BufferedWriter bw = new BufferedWriter(new FileWriter(new File("index.html"), false));
         bw.write("<html><body>");
         bw.write("<ul>");
 
+        // Dynamically write HTML links to "index.html" for all build logs in the "build-logs" directory
         for(File log : json_dir.listFiles()){
             bw.write("<li>");
             bw.write("<a href='/build-logs/");
@@ -305,9 +314,9 @@ public class CI extends AbstractHandler
             bw.write("</li>");
         }
 
+        // Wrap up and close the writer
         bw.write("</ul>");
         bw.write("</body></html>");
         bw.close();
-
     }
 }
