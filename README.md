@@ -8,7 +8,7 @@ If you are a contributor to this repo or just want to compile from source, you m
 Note that this project uses Maven 3.8.0.
 
 For compiling, either use `$ mvn compile` to test if compilation is possible or `$ mvn package` to build a executable .jar in the target/ folder.  
-To execute and start the server you may use `$ mvn exec:java -Dexec.mainClass="group9.CI`.  
+To execute and start the server you may use `$ mvn exec:java -Dexec.mainClass="group9.CI"`.  
 Cleaning up after package builds is easily done with `$ mvn clean`
 
 For running the tests simply use `$ mvn test`.
