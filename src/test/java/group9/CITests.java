@@ -41,7 +41,7 @@ public class CITests
         File f = new File(compileSuccessSubProject);
         String p = f.getAbsolutePath();
         String result = CI.compileProject(p);
-        assertFalse("BUILD SUCCESS".equals(result));
+        assertTrue("BUILD SUCCESS".equals(result));
     }
 
     // testProject failure test
